@@ -16,13 +16,21 @@ class Joint:
         self.tangent = self.unscaled_tangent.unit()
         self.normal = self.angle.cross(self.tangent).unit()
         self.id = int(id)
+        self.flattancrossnorm = vec.obj(x = self.tangent.x, y = self.tangent.y, z = 0).cross(self.normal).unit()
 
     
+    # def roll(self) -> float:
+    #     return math.pi / 2 - self.angle.theta
+    
+    # def theta(self) -> float:
+    #     return self.angle.phi
+        
     def roll(self) -> float:
-        return math.pi / 2 - self.angle.theta
+        initialAngle = self.flattancrossnorm.deltaangle(vec.obj(x = self.tangent.x, y = self.tangent.y, z = 0).rotateZ(-math.pi/2))
+        return initialAngle if self.flattancrossnorm.theta < math.pi/2 else -initialAngle
     
     def theta(self) -> float:
-        return self.angle.phi
+        return self.tangent.rotateZ(-math.pi/2).phi
     
     def railCoordinate(self, offset: float) -> vec.Vector3D:
         return self.relativeCoordinate(offset, 0, 0)
@@ -118,27 +126,27 @@ def hsv2rgb(h,s,v):
     return tuple(round(i * 255) for i in colorsys.hsv_to_rgb(h,s,v))
 
 def convert(*value):
-    return tuple(map(lambda e: int(e * 12 * 50), value))
+    return tuple(map(lambda e: int(e * 12 * 150), value))
 
 
 from PIL import Image, ImageDraw, ImageFont
 im = Image.new('RGBA', convert(x_size, y_size), (255, 255, 255, 255)) 
 draw = ImageDraw.Draw(im) 
-for i in range(0, len(coords) -1):
-    draw.line(convert(coords[i-1].main.x, y_size - coords[i-1].main.y, coords[i].main.x, y_size - coords[i].main.y), fill = (0,0,0,255), width= 3)
+for i in range(0, len(coords)):
+    draw.line(convert(coords[i-1].main.x, y_size - coords[i-1].main.y, coords[i].main.x, y_size - coords[i].main.y), fill = (0,0,0,255), width= 9)
 
 for num, i in enumerate(my_supports):
     draw.line(convert(
         1/12 * math.cos(i.angle) + i.x, y_size - (1/12 * math.sin(i.angle) + i.y),
         -1/12 * math.cos(i.angle) + i.x, y_size - (-1/12 * math.sin(i.angle) + i.y)
-        ), fill=(*hsv2rgb(num/len(my_supports),1,1),255), width = 3)
+        ), fill=(*hsv2rgb(num/len(my_supports),1,1),255), width = 9)
 
-font = ImageFont.truetype("Arial.ttf", 16)
+font = ImageFont.truetype("Arial.ttf", 16 * 3)
 
 for num, i in enumerate(my_supports):
     draw.text(convert(i.x, y_size - i.y),f"S#{num}",(0,0,0, 255),font=font)
 
-im.show()
+#im.show()
 
 im.save("myOutput.png", dpi=convert(1/12,1/12))
 
