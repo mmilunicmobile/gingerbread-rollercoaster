@@ -7,6 +7,8 @@ from scipy.spatial.distance import cdist
 def convert(*value):
     return tuple(map(lambda e: int(e * 12 * 150), value))
 
+font = ImageFont.truetype("Arial.ttf", 16 * 2)
+
 def transformTrackSection(coords: List[vec.Vector3D]):
     points = np.array(list(map(lambda e: [e.x, e.y, e.z], [
         coords[0], 
@@ -27,7 +29,7 @@ def transformTrackSection(coords: List[vec.Vector3D]):
 
     return newer_coords
 
-def drawCoords(coords: List[vec.Vector3D], id: int, isLeft: bool):
+def drawCoords(coords: List[vec.Vector3D], id: str):
     max_x = max([coord.x for coord in coords]) + .5/12
     max_y = max([coord.y for coord in coords]) + .5/12
 
@@ -42,7 +44,10 @@ def drawCoords(coords: List[vec.Vector3D], id: int, isLeft: bool):
     
     draw.line(convert(*properCoords), fill=(0,0,0,255), width = 9)
 
-    im.save(f"T#{id}{'left' if isLeft else 'right'}.png", dpi=convert(1/12,1/12))
+    draw.text(convert(0, 0),f"T#{id}",(0,0,0, 255),font=font)
+    draw.text(convert(properCoords[0], properCoords[1]),f"T#{id}",(0,255,0, 255),font=font)
+
+    im.save(f"T#{id}.png", dpi=convert(1/12,1/12))
 
 def plane_of_best_fit(points):
     """Finds the plane of best fit for a set of points.

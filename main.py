@@ -22,6 +22,8 @@ The size of the house is:
 x_size = 2.36
 y_size = 4.18
 
+rail_spacing = 1/3/12
+
 scale_constant = 46.0133857727051
     
 offsetConstant = vec.obj(x=.9581111400446335 + 3/12, y= 1.8970500491082292 + 3/12, z=0)
@@ -85,8 +87,8 @@ for i in range(0, len(coords)):
     draw.line(convert(coords[i-1].main.x, y_size - coords[i-1].main.y, coords[i].main.x, y_size - coords[i].main.y), fill = (0,0,0,255), width= 9)
 
 for i in coords:
-    poseRight = i.railCoordinate(1/3/12)
-    poseLeft = i.railCoordinate(-1/3/12)
+    poseRight = i.railCoordinate(rail_spacing)
+    poseLeft = i.railCoordinate(-rail_spacing)
     coasterCoordsMatpltRight[0].append(poseRight.x)
     coasterCoordsMatpltRight[1].append(poseRight.y)
     coasterCoordsMatpltRight[2].append(poseRight.z)
@@ -117,9 +119,6 @@ font = ImageFont.truetype("Arial.ttf", 16 * 3)
 for num, i in enumerate(my_supports):
     draw.text(convert(i.x, y_size - i.y),f"S#{num}",(0,0,0, 255),font=font)
 
-#im.show()
-
-im.save("myOutput.png", dpi=convert(1/12,1/12))
 
 file_path = "output.txt"
 
@@ -132,24 +131,49 @@ with open(file_path, 'w') as file:
 print(f"Content has been written to {file_path}")
 
 
-#plt.show()
+def createTrackAndImages(rail_position, name_modifier, name_abbreviation, color):
+    runningLength = 0
 
-runningLength = 0
+    segmentLength = 7/12
 
-segmentLength = 2/12
+    current_index = 0
 
-current_index = 0
+    leftTrackIndexes = []
 
-leftTrackIndexes = []
+    while (current_index < len(coords)):
+        leftTrackIndexes.append(current_index)
+        while (runningLength < segmentLength):
+            current_index += 1
+            if current_index >= len(coords):
+                break
+            # print(current_index)
+            runningLength += (coords[current_index - 1].railCoordinate(rail_position) - coords[current_index].railCoordinate(rail_position)).mag
+        runningLength -= segmentLength
 
-while (current_index < len(coords)):
-    leftTrackIndexes.append(current_index)
-    while (runningLength < segmentLength):
-        current_index += 1
-        if current_index >= len(coords):
-            break
-        # print(current_index)
-        runningLength += (coords[current_index - 1].railCoordinate(-1/3/12) - coords[current_index].railCoordinate(-1/3/12)).rho
-    runningLength -= segmentLength
+    for i in range(0, len(leftTrackIndexes) - 1):
+        createtrack.drawCoords(createtrack.transformTrackSection(list(map(lambda e: e.railCoordinate(rail_position), coords[leftTrackIndexes[i]:leftTrackIndexes[i+1]]))), f"{i}{name_modifier}")
+        draw.text(convert(coords[leftTrackIndexes[i]].railCoordinate(rail_position).x, y_size - coords[leftTrackIndexes[i]].railCoordinate(rail_position).y),f"T#{i}{name_abbreviation}",color,font=font)
+        draw.line(convert(
+            coords[leftTrackIndexes[i]].railCoordinate(rail_position).x, y_size - coords[leftTrackIndexes[i]].railCoordinate(rail_position).y,
+            coords[leftTrackIndexes[i]].railCoordinate(-0).x, y_size - coords[leftTrackIndexes[i]].railCoordinate(-0).y
+            ), fill=color, width = 9)
+    createtrack.drawCoords(createtrack.transformTrackSection(list(map(lambda e: e.railCoordinate(rail_position), coords[leftTrackIndexes[-1]:]))), f"{len(leftTrackIndexes) - 1}{name_modifier}")
+    draw.text(convert(coords[leftTrackIndexes[-1]].railCoordinate(rail_position).x, y_size - coords[leftTrackIndexes[-1]].railCoordinate(rail_position).y),f"T#{len(leftTrackIndexes) - 1}{name_abbreviation}",color,font=font)
+    draw.line(convert(
+            coords[leftTrackIndexes[i]].railCoordinate(rail_position).x, y_size - coords[leftTrackIndexes[i]].railCoordinate(rail_position).y,
+            coords[leftTrackIndexes[i]].railCoordinate(-0).x, y_size - coords[leftTrackIndexes[i]].railCoordinate(-0).y
+            ), fill=color, width = 9)
 
-createtrack.drawCoords(createtrack.transformTrackSection(list(map(lambda e: e.railCoordinate(-1/3/12), coords[0:500]))), 0, True)
+createTrackAndImages(
+    -rail_spacing, "left", "L", (255,0,0,255)
+)
+
+createTrackAndImages(
+    rail_spacing, "right", "R", (0,0,255,255)
+)
+
+#im.show()
+
+im.save("myOutput.png", dpi=convert(1/12,1/12))
+
+plt.show()
