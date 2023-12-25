@@ -1,73 +1,17 @@
+from typing import List
 import vector as vec
 import csv
 import math
 import colorsys
 
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+
+from joints import *
+
+import createtrack
 
 coords = []
-
-class Joint:
-    def __init__(self, main: vec.Vector3D, angle: vec.Vector3D, nextMain: vec.Vector3D, id: int) -> None:
-        self.main = main
-        self.unchanged_angle = angle
-        self.unscaled_angle = (angle - main)
-        self.angle = self.unscaled_angle.unit()
-        self.unscaled_tangent = nextMain - main
-        self.tangent = self.unscaled_tangent.unit()
-        self.normal = self.angle.cross(self.tangent).unit()
-        self.id = int(id)
-        self.flattancrossnorm = vec.obj(x = self.tangent.x, y = self.tangent.y, z = 0).cross(self.normal).unit()
-
-    
-    # def roll(self) -> float:
-    #     return math.pi / 2 - self.angle.theta
-    
-    # def theta(self) -> float:
-    #     return self.angle.phi
-        
-    def roll(self) -> float:
-        initialAngle = self.flattancrossnorm.deltaangle(vec.obj(x = self.tangent.x, y = self.tangent.y, z = 0).rotateZ(-math.pi/2))
-        return initialAngle if self.flattancrossnorm.theta < math.pi/2 else -initialAngle
-    
-    def theta(self) -> float:
-        return self.tangent.rotateZ(-math.pi/2).phi
-    
-    def railCoordinate(self, offset: float) -> vec.Vector3D:
-        return self.relativeCoordinate(offset, 0, 0)
-    
-    def supportCoordinate(self, verticalOffset: float) -> vec.Vector3D:
-        return self.relativeCoordinate(0, -verticalOffset, 0)
-    
-    def groundCoordinate(self, verticalOffset: float) -> vec.Vector2D:
-        coordinate = self.supportCoordinate(verticalOffset)
-        return vec.obj(x=coordinate.x, y=coordinate.y)
-        
-    def heightCoordinate(self, verticalOffset: float) -> float:
-        return self.supportCoordinate(verticalOffset).z
-
-    def relativeCoordinate(self, angle: float, normal: float, tangent: float) -> vec.Vector3D:
-        """For this, normal is the normal of the track, tangent is the direction of the track, 
-        and angle is to the right of the track as defined by tangent X normal."""
-        return self.main + self.angle * angle + self.normal * normal + self.tangent * tangent
-    
-class PersonalJoint:
-    def __init__(self, x: float, y: float, z:float, angle: float, roll: float) -> None:
-        self.x = x
-        self.y = y
-        self.z = z
-        self.angle = angle
-        self.roll = roll
-    
-    @staticmethod
-    def customConstructor(thingy: Joint) -> 'PersonalJoint':
-        spot = thingy.supportCoordinate((1/8)/12)
-        return PersonalJoint(spot.x, spot.y, spot.z, thingy.theta(), thingy.roll())
-    
-    def __str__(self):
-        return f"({self.x*12:.1f} in, {self.y*12:.1f} in), Height: {self.z*12:.1f} in, Angle: {math.degrees(self.angle):.0f} deg, Roll: {math.degrees(self.roll):.0f} deg"
-    
-    def essential(self):
-        return f"Height: {self.z*12:.1f} in, Roll: {math.degrees(self.roll):.0f} deg, Pose: ({self.x*12:.1f} in, {self.y*12:.1f} in), Angle: {math.degrees(self.angle):.0f} deg"
 
 """
 The size of the house is:
@@ -128,6 +72,11 @@ def hsv2rgb(h,s,v):
 def convert(*value):
     return tuple(map(lambda e: int(e * 12 * 150), value))
 
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+
+coasterCoordsMatpltLeft = [[],[],[]]
+coasterCoordsMatpltRight = [[],[],[]]
 
 from PIL import Image, ImageDraw, ImageFont
 im = Image.new('RGBA', convert(x_size, y_size), (255, 255, 255, 255)) 
@@ -135,11 +84,33 @@ draw = ImageDraw.Draw(im)
 for i in range(0, len(coords)):
     draw.line(convert(coords[i-1].main.x, y_size - coords[i-1].main.y, coords[i].main.x, y_size - coords[i].main.y), fill = (0,0,0,255), width= 9)
 
+for i in coords:
+    poseRight = i.railCoordinate(1/3/12)
+    poseLeft = i.railCoordinate(-1/3/12)
+    coasterCoordsMatpltRight[0].append(poseRight.x)
+    coasterCoordsMatpltRight[1].append(poseRight.y)
+    coasterCoordsMatpltRight[2].append(poseRight.z)
+    coasterCoordsMatpltLeft[0].append(poseLeft.x)
+    coasterCoordsMatpltLeft[1].append(poseLeft.y)
+    coasterCoordsMatpltLeft[2].append(poseLeft.z)
+
+ax.set_xlim([0, 5])
+ax.set_ylim([0, 5])
+ax.set_zlim([0, 5])
+
 for num, i in enumerate(my_supports):
     draw.line(convert(
         1/12 * math.cos(i.angle) + i.x, y_size - (1/12 * math.sin(i.angle) + i.y),
         -1/12 * math.cos(i.angle) + i.x, y_size - (-1/12 * math.sin(i.angle) + i.y)
         ), fill=(*hsv2rgb(num/len(my_supports),1,1),255), width = 9)
+    ax.plot(
+        [1/12 * math.cos(i.angle) * math.cos(i.roll) + i.x, -1/12 * math.cos(i.angle) * math.cos(i.roll) + i.x],
+        [1/12 * math.sin(i.angle) * math.cos(i.roll) + i.y, -1/12 * math.sin(i.angle) * math.cos(i.roll) + i.y],
+        [1/12 * math.sin(i.roll) + i.z, -1/12 * math.sin(i.roll) + i.z],
+        color="black")
+    
+ax.plot(*coasterCoordsMatpltLeft, color="red")
+ax.plot(*coasterCoordsMatpltRight, color="red")
 
 font = ImageFont.truetype("Arial.ttf", 16 * 3)
 
@@ -160,3 +131,25 @@ with open(file_path, 'w') as file:
 
 print(f"Content has been written to {file_path}")
 
+
+#plt.show()
+
+runningLength = 0
+
+segmentLength = 2/12
+
+current_index = 0
+
+leftTrackIndexes = []
+
+while (current_index < len(coords)):
+    leftTrackIndexes.append(current_index)
+    while (runningLength < segmentLength):
+        current_index += 1
+        if current_index >= len(coords):
+            break
+        # print(current_index)
+        runningLength += (coords[current_index - 1].railCoordinate(-1/3/12) - coords[current_index].railCoordinate(-1/3/12)).rho
+    runningLength -= segmentLength
+
+createtrack.drawCoords(createtrack.transformTrackSection(list(map(lambda e: e.railCoordinate(-1/3/12), coords[0:500]))), 0, True)
