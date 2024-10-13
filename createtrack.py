@@ -30,10 +30,52 @@ def transformTrackSection(coords: List[vec.Vector3D]):
     return newer_coords
 
 def drawCoords(coords: List[vec.Vector3D], id: str):
+    drawCoordsBase(coords, id)
+    drawCoordsHeight(coords, id)
+
+def drawCoordsHeight(coords, id):
+    to_flat = lambda e: vec.obj(x=e.x, y=e.y, z=0)
+    length = sum([to_flat(coords[i + 1] - coords[i]).mag for i in range(0, len(coords) - 1)])
+    max_x = max([coord.z for coord in coords]) + 1/12
+    max_y = length + 1/12
+
+    im = Image.new('RGBA', convert(max_x, max_y), (255, 255, 255, 0)) 
+    draw = ImageDraw.Draw(im) 
+
+    properCoords = []
+
+    runningLength = .5/12
+
+    for i in range(0, len(coords) -1):
+        properCoords.append(.5/12 + coords[i].z)
+        properCoords.append(runningLength)
+        runningLength += to_flat(coords[i+1] - coords[i]).mag
+    
+    properCoords.append(.5/12 + coords[-1].z)
+    properCoords.append(.5/12 + length)
+    
+    properCoords.append(.5/12)
+    properCoords.append(.5/12 + length)
+
+    properCoords.append(.5/12)
+    properCoords.append(.5/12)
+
+    properCoords.append(.5/12 + coords[0].z)
+    properCoords.append(.5/12)
+
+    draw.line(convert(*properCoords), fill=(0,0,0,255), width = 6)
+
+    draw.text(convert(0, 0),f"T#{id}_height",(0,0,0, 255),font=font)
+    draw.text(convert(.5/12, .5/12),f"{id}",(0,255,0, 255),font=font)
+
+    im.save(f"TwizzlerMoldsHeights/T#{id}_height.png", dpi=convert(1/12,1/12))
+
+
+def drawCoordsBase(coords, id):
     max_x = max([coord.x for coord in coords]) + .5/12
     max_y = max([coord.y for coord in coords]) + .5/12
 
-    im = Image.new('RGBA', convert(max_x, max_y), (255, 255, 255, 255)) 
+    im = Image.new('RGBA', convert(max_x, max_y), (255, 255, 255, 0)) 
     draw = ImageDraw.Draw(im) 
 
     properCoords = []
@@ -42,12 +84,12 @@ def drawCoords(coords: List[vec.Vector3D], id: str):
         properCoords.append(i.x)
         properCoords.append(max_y - i.y)
     
-    draw.line(convert(*properCoords), fill=(0,0,0,255), width = 9)
+    draw.line(convert(*properCoords), fill=(0,0,0,255), width = 6)
 
-    draw.text(convert(0, 0),f"T#{id}",(0,0,0, 255),font=font)
+    #draw.text(convert(0, 0),f"T#{id}",(0,0,0, 255),font=font)
     draw.text(convert(properCoords[0], properCoords[1]),f"T#{id}",(0,255,0, 255),font=font)
 
-    im.save(f"T#{id}.png", dpi=convert(1/12,1/12))
+    im.save(f"TwizzlerMoldsBases/T#{id}.png", dpi=convert(1/12,1/12))
 
 def plane_of_best_fit(points):
     """Finds the plane of best fit for a set of points.

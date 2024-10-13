@@ -176,4 +176,4 @@ createTrackAndImages(
 
 im.save("myOutput.png", dpi=convert(1/12,1/12))
 
-plt.show()
+# plt.show()
